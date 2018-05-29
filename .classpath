@@ -3,7 +3,6 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
 	<classpathentry kind="lib" path="lib/jline-2.12.1.jar"/>
-	<classpathentry kind="lib" path="D:/Pepê/2018.1 UFRPE/Arquitetura de Computadores/Projetos/Projeto 2 - Processador Mips/MIPSExample/jar/MIPSExample.jar"/>
-	<classpathentry kind="lib" path="D:/Pepê/2018.1 UFRPE/Arquitetura de Computadores/Projetos/Projeto 2 - Processador Mips/MIPSExample/lib/MIPS-1.3.jar"/>
+	<classpathentry kind="lib" path="lib/MIPS-1.3.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
