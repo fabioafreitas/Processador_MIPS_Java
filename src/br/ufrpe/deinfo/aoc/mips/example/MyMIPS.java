@@ -178,9 +178,7 @@ public class MyMIPS implements MIPS{
 		if (opCode == 0x0) {
 			switch (funct) {
 				case FUNCT.add: {
-					state.writeRegister(rd,
-							(state.readRegister(rs) +
-							state.readRegister(rt)));
+					state.writeRegister(rd, (state.readRegister(rs) + state.readRegister(rt)));
 					break;
 				}
 				case FUNCT.addu: {
@@ -188,11 +186,12 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.and: {
-					// TODO and
+					// não sei se está certo
+					//state.writeRegister(rd, (state.readRegister(rs) & state.readRegister(rt)) );
 					break;
 				}
 				case FUNCT.jr: {
-					// TODO jr
+					state.setPC( rs );
 					break;
 				}
 				case FUNCT.nor: {
@@ -203,24 +202,24 @@ public class MyMIPS implements MIPS{
 					// TODO or
 					break;
 				}
-				case FUNCT.slt: {
-					// TODO slt
+				case FUNCT.slt: { // R[rd] = (R[rs] < R[rt]) ? 1 : 0
+					state.writeRegister(rd, (state.readRegister(rs) < state.readRegister(rs))? 1 : 0  );
 					break;
 				}
-				case FUNCT.sltu: {
+				case FUNCT.sltu: { 
 					// TODO sltu
 					break;
 				}
-				case FUNCT.sll: {
-					// TODO sll
+				case FUNCT.sll: { // R R[rd] = R[rt] << shamt
+					state.writeRegister(rd,  state.readRegister(rt) << shamt );
 					break;
 				}
-				case FUNCT.srl: {
-					// TODO srl
+				case FUNCT.srl: { // R R[rd] = R[rt] >> shamt
+					state.writeRegister(rd,  state.readRegister(rt) >> shamt );
 					break;
 				}
-				case FUNCT.sub: {
-					// TODO sub
+				case FUNCT.sub: { // R R[rd] = R[rs] - R[rt]
+					state.writeRegister(rd, state.readRegister(rs) - state.readRegister(rt));
 					break;
 				}
 				case FUNCT.subu: {
@@ -251,8 +250,8 @@ public class MyMIPS implements MIPS{
 					// TODO multu
 					break;
 				}
-				case FUNCT.sra: {
-					// TODO sra
+				case FUNCT.sra: { // R[rd] = R[rt] >>> shamt
+					state.writeRegister(rd, state.readRegister(rt) >>> shamt);
 					break;
 				}
 			}
