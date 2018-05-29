@@ -1,7 +1,6 @@
 package br.ufrpe.deinfo.aoc.mips.example;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 
 import br.ufrpe.deinfo.aoc.mips.MIPS;
 import br.ufrpe.deinfo.aoc.mips.Simulator;
@@ -64,11 +63,30 @@ public class MyMIPS implements MIPS{
 		state.setPC(state.getPC()+4); // somando 4 bytes no valor do PC
 	}
 	
+	private static int complementoa2_hw (int i) {
+		i = 0xffff - i + 1;
+		// desconsidera os 16 ultimos bits
+		return i;
+	}
+	
 	// comandos do tipo I
-	public static void comandoI(State state, int opCode, int immediate) throws IOException{
+	public static void comandoI(State state, int opCode, int rs, int rt, int immediate) throws IOException{
+		
+		boolean negative = false;
 		switch(opCode) {
 			case OPCODE.addi: {
 				// TODO addi
+				// complemento a 2
+				if (immediate >= 0b1000000000000000) {
+					immediate = complementoa2_hw(immediate);
+					negative = true;
+				}
+				int store = state.readRegister(rs) +
+						(negative ? (-immediate) : immediate);
+				Simulator.info("immediate "+ Integer.toBinaryString(immediate));
+				Simulator.info("store "+ store);
+				state.writeRegister(rt, state.readRegister(rs) +
+						(negative ? (-immediate) : immediate));
 				break;
 			}
 			case OPCODE.addiu: {
@@ -156,10 +174,13 @@ public class MyMIPS implements MIPS{
 	
 	// comandos do tipo R
 	public static void comandoR(State state, int opCode, int rs, int rt, int rd, int shamt, int funct) throws IOException{
+		
 		if (opCode == 0x0) {
 			switch (funct) {
 				case FUNCT.add: {
-					// TODO add
+					state.writeRegister(rd,
+							(state.readRegister(rs) +
+							state.readRegister(rt)));
 					break;
 				}
 				case FUNCT.addu: {
@@ -256,7 +277,6 @@ public class MyMIPS implements MIPS{
 		this.console = Simulator.getConsole();
 	}
 	public static void executarInstrucao (State state, int instrucao) throws IOException {
-		
 		// Formatacao
 		int location_opcode = 26,
 		location_rs = 21,
@@ -329,7 +349,7 @@ public class MyMIPS implements MIPS{
 				}
 			}
 			*/
-			comandoI(state, opCode, immediate);
+			comandoI(state, opCode, rs, rt, immediate);
 		}
 	}
 	
@@ -391,12 +411,12 @@ public class MyMIPS implements MIPS{
 				System.out.println(j+": "+Integer.toBinaryString(i));
 				executarInstrucao(null, i);
 				j++;
-			}*/
-			/*
+			}
+			*/
 			Simulator.setMIPS(new MyMIPS());
 			Simulator.setLogLevel(Simulator.LogLevel.INFO);
 			Simulator.start();
-			*/
+			
 		} catch (Exception e) {		
 			e.printStackTrace();
 		}
