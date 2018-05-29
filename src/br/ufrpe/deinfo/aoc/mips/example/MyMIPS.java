@@ -181,8 +181,8 @@ public class MyMIPS implements MIPS{
 					state.writeRegister(rd, (state.readRegister(rs) + state.readRegister(rt)));
 					break;
 				}
-				case FUNCT.addu: {
-					// TODO addu
+				case FUNCT.addu: { // R[rd] = R[rs] + R[rt] pose ser que seja de outro jeito
+					state.writeRegister(rd, (state.readRegister(rs) + state.readRegister(rt)));
 					break;
 				}
 				case FUNCT.and: { // R[rd] = R[rs] & R[rt]
