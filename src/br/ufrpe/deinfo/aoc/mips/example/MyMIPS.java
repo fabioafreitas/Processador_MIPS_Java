@@ -83,8 +83,8 @@ public class MyMIPS implements MIPS{
 				}
 				int store = state.readRegister(rs) +
 						(negative ? (-immediate) : immediate);
-				Simulator.info("immediate "+ Integer.toBinaryString(immediate));
-				Simulator.info("store "+ store);
+//				Simulator.info("immediate "+ Integer.toBinaryString(immediate));
+//				Simulator.info("store "+ store);
 				state.writeRegister(rt, state.readRegister(rs) +
 						(negative ? (-immediate) : immediate));
 				break;
