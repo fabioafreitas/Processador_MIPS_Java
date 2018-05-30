@@ -56,10 +56,8 @@ public class MyMIPS implements MIPS{
 			state.writeRegister(29, 0x3ffc);
 		}
 		
-		
 		int instrucaoAtual = state.readInstructionMemory(state.getPC()).intValue();
 		executarInstrucao(state, instrucaoAtual);
-		
 		state.setPC(state.getPC()+4); // somando 4 bytes no valor do PC
 	}
 	
@@ -84,76 +82,83 @@ public class MyMIPS implements MIPS{
 				state.writeRegister(rt, ((int) state.readRegister(rs)) & immediate);
 				break;
 			}
-			case OPCODE.beq: {
-				// TODO beq
+			case OPCODE.beq: { 
+				// TODO beq utiliza labels DÚVIDA
 				break;
 			}
 			case OPCODE.bne: {
-				// TODO bne
+				// TODO bne utiliza labels DÚVIDA
 				break;
 			}
-			case OPCODE.lbu: {
-				// TODO lbu
+			case OPCODE.lbu: { // R[rt]={24’b0,M[R[rs]+SignExtImm](7:0)}
+				// TODO não sei se o unsigned muda em algo, NÃO SEI SE ESTÁ CERTO
+				Integer address = state.readWordDataMemory(state.readRegister(rs)+immediate);
+				Integer halfWord = 0x000000ff & address;
+				state.writeRegister(rt, halfWord);
 				break;
 			}
-			case OPCODE.lhu: {
-				// TODO lhu
+			case OPCODE.lhu: { // R[rt]={16’b0,M[R[rs] +SignExtImm](15:0)}
+				// TODO não sei se o unsigned muda em algo, NÃO SEI SE ESTÁ CERTO
+				Integer address = state.readWordDataMemory(state.readRegister(rs)+immediate);
+				Integer halfWord = 0x0000ffff & address;
+				state.writeRegister(rt, halfWord);
 				break;
 			}
-			case OPCODE.ll: {
-				// TODO ll
+			case OPCODE.ll: { // NÃO É PRA FAZER
+				break;        // NÃO É PRA FAZER  
+			}
+			case OPCODE.lui: { // R[rt] = {imm, 16’b0}
+				state.writeRegister(rt, immediate<<16);
 				break;
 			}
-			case OPCODE.lui: {
-				// TODO lui
-				break;
-			}
-			case OPCODE.lw: {
-				// TODO lw
+			case OPCODE.lw: { // R[rt] = M[R[rs]+SignExtImm]
+				// NÃO SEI SE ESTÁ CERTO
+				state.writeRegister(rt, state.readWordDataMemory(state.readRegister(rs)+immediate));
 				break;
 			}
 			case OPCODE.ori: { // R[rt] = R[rs] | ZeroExtImm
 				state.writeRegister(rt, ((int) state.readRegister(rs)) | immediate );
 				break;
 			}
-			case OPCODE.slti: {
-				// TODO slti
+			case OPCODE.slti: { // R[rt] = (R[rs] < SignExtImm)? 1 : 0
+				state.writeRegister(rt, ( ((int) state.readRegister(rs) ) < immediate)? 1 : 0 );
 				break;
 			}
-			case OPCODE.sltiu: {
-				// TODO sltiu
+			case OPCODE.sltiu: { // R[rt] = (R[rs] < SignExtImm)? 1 : 0
+				state.writeRegister(rt, Integer.compareUnsigned( state.readRegister(rs), immediate) == -1 ? 1 : 0 );
 				break;
 			}
-			case OPCODE.sb: {
-				// TODO sb
+			case OPCODE.sb: { // M[R[rs]+SignExtImm](7:0) = R[rt](7:0)
+				Integer byteWord = 0x000000ff & state.readRegister(rt);
+				state.writeByteDataMemory(state.readRegister(rs)+immediate, byteWord);
 				break;
 			}
-			case OPCODE.sc: {
-				// TODO sc
+			case OPCODE.sc: { // NÃO É PRA FAZER
+				break;        // NÃO É PRA FAZER
+			}
+			case OPCODE.sh: { // M[R[rs]+SignExtImm](15:0) = R[rt](15:0)
+				Integer halfWord = 0x0000ffff & state.readRegister(rt);
+				state.writeHalfwordDataMemory(state.readRegister(rs)+immediate, halfWord);
 				break;
 			}
-			case OPCODE.sh: {
-				// TODO sh
-				break;
-			}
-			case OPCODE.sw: {
-				// TODO sw
+			case OPCODE.sw: { // M[R[rs]+SignExtImm] = R[rt]
+				state.writeWordDataMemory(state.readRegister(rs)+immediate, state.readRegister(rt));
 				break;
 			}
 			case OPCODE.lwc1: {
-				// TODO lwcl
+				// TODO lwcl  UTILIZA O COPROCESSOR 1 DÚVIDA
 				break;
 			}
 			case OPCODE.ldc1: {
-				// TODO ldcl
+				// TODO ldcl  UTILIZA O COPROCESSOR 1 DÚVIDA
 				break;
 			}
 			case OPCODE.swc1: {
-				// TODO swcl
+				// TODO swcl  UTILIZA O COPROCESSOR 1 DÚVIDA
 				break;
 			}
 			case OPCODE.sdc1: {
-				// TODO sdcl
+				// TODO sdcl  UTILIZA O COPROCESSOR 1 DÚVIDA
 				break;
 			}
 		}
@@ -181,11 +186,11 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.nor: { // R[rd] = ~(R[rs] | R[rt])
-					state.writeRegister(rd, ~( ((int) state.readRegister(rs)) | ((int) state.readRegister(rt))) );
+					state.writeRegister(rd, ~( state.readRegister(rs) | state.readRegister(rt)) );
 					break;
 				}
 				case FUNCT.or: { // R[rd] = R[rs] | R[rt]
-					state.writeRegister(rd, ( ((int) state.readRegister(rs)) | ((int) state.readRegister(rt))) );
+					state.writeRegister(rd, ( state.readRegister(rs) | state.readRegister(rt)) );
 					break;
 				}
 				case FUNCT.slt: { // R[rd] = (R[rs] < R[rt]) ? 1 : 0
@@ -194,7 +199,6 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.sltu: { 
-					// TODO sltu
 					state.writeRegister(rd, Integer.compareUnsigned( state.readRegister(rs),
 							state.readRegister(rt)) == -1 ? 1 : 0 );
 					break;
@@ -216,27 +220,27 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.div: {
-					// TODO div
+					// TODO div   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.divu: {
-					// TODO divu
+					// TODO divu   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.mfhi: {
-					// TODO mfhi
+					// TODO mfhi   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.mflo: {
-					// TODO mflo
+					// TODO mflo   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.mult: {
-					// TODO mult
+					// TODO mult   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.multu: {
-					// TODO multu
+					// TODO multu   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.sra: { // R[rd] = R[rt] >>> shamt
@@ -246,7 +250,7 @@ public class MyMIPS implements MIPS{
 			}
 		} else if (opCode == 0x10) {
 			if (funct == FUNCT.mfc0) {
-				// TODO mfc0
+				// TODO mfc0 UTILIZA O COPRESSADOR 0 DÚVIDA
 			}
 		}
 	}
@@ -254,9 +258,9 @@ public class MyMIPS implements MIPS{
 	// comandos do tipo J
 	public static void comandoJ(State state, int opCode, int address) throws IOException{
 		if (opCode == OPCODE.j) {
-			// TODO j
+			// TODO j UTILIZA LABELS DÚVIDA
 		} else {
-			// TODO jal
+			// TODO jal UTILIZA LABELS DÚVIDA
 		}
 	}
 	
