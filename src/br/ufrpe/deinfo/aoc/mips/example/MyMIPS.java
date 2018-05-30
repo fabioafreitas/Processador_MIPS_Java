@@ -63,34 +63,21 @@ public class MyMIPS implements MIPS{
 		state.setPC(state.getPC()+4); // somando 4 bytes no valor do PC
 	}
 	
-	private static int complementoa2_hw (int i) {
-		i = 0xffff - i + 1;
-		// desconsidera os 16 ultimos bits
-		return i;
-	}
-	
 	// comandos do tipo I
 	public static void comandoI(State state, int opCode, int rs, int rt, int immediate) throws IOException{
-		
-		boolean negative = false;
+		if (immediate >= 0b1000000000000000) {
+			
+			// converte de complemento a 2 16 bit para 32 bit
+			immediate = immediate + 0xffff0000;
+		}
 		switch(opCode) {
 			case OPCODE.addi: {
-				// TODO addi
-				// complemento a 2
-				if (immediate >= 0b1000000000000000) {
-					immediate = complementoa2_hw(immediate);
-					negative = true;
-				}
-				int store = state.readRegister(rs) +
-						(negative ? (-immediate) : immediate);
-//				Simulator.info("immediate "+ Integer.toBinaryString(immediate));
-//				Simulator.info("store "+ store);
-				state.writeRegister(rt, state.readRegister(rs) +
-						(negative ? (-immediate) : immediate));
+				state.writeRegister(rt,  state.readRegister(rs) + immediate);
+				// Overflow ?
 				break;
 			}
 			case OPCODE.addiu: {
-				// TODO addiu
+				state.writeRegister(rt, state.readRegister(rs) + immediate);
 				break;
 			}
 			case OPCODE.andi: {
@@ -202,11 +189,14 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.slt: { // R[rd] = (R[rs] < R[rt]) ? 1 : 0
-					state.writeRegister(rd, (state.readRegister(rs) < state.readRegister(rs))? 1 : 0  );
+					state.writeRegister(rd, ( ( (int) state.readRegister(rs) ) 
+												< ( (int) state.readRegister(rt) ) ? 1 : 0 ) );
 					break;
 				}
 				case FUNCT.sltu: { 
 					// TODO sltu
+					state.writeRegister(rd, Integer.compareUnsigned( state.readRegister(rs),
+							state.readRegister(rt)) == -1 ? 1 : 0 );
 					break;
 				}
 				case FUNCT.sll: { // R[rd] = R[rt] << shamt
@@ -222,7 +212,7 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.subu: {
-					// TODO subu
+					state.writeRegister(rd, state.readRegister(rs) - state.readRegister(rt));
 					break;
 				}
 				case FUNCT.div: {
@@ -294,38 +284,11 @@ public class MyMIPS implements MIPS{
 			instrucao = instrucao - (rd << location_rd);
 			shamt = instrucao >>> location_shamt;
 			funct = instrucao - (shamt << location_shamt);
-			/*
-			System.out.println("Tipo R\n"+ "opCode: "+ Integer.toBinaryString(opCode)
-								+"\trs: "+ rs+"\trt: "+rt+"\trd: "+rd+"\tshamt: "+shamt+"\tfunct: "+ funct);
-			for (Field f : FUNCT.class.getDeclaredFields()) {
-				try {
-				if (f.getInt(null) == funct) {
-					System.out.println(f.getName());
-					break;
-				}
-				} catch(Exception e) {
-					e.printStackTrace();
-				}
-			}
-			*/
 			comandoR(state, opCode, rs, rt, rd, shamt, funct);
 			
 		} else if (opCode == OPCODE.j || opCode == OPCODE.jal) {
 			// Tipo J
 			int address = instrucao;
-			/*
-			System.out.println("Tipo J\n"+"opCode: "+Integer.toHexString(opCode)+"\tadress: "+Integer.toHexString(address));
-			for (Field f : OPCODE.class.getDeclaredFields()) {
-				try {
-				if (f.getInt(null) == opCode) {
-					System.out.println(f.getName());
-					break;
-				}
-				} catch(Exception e) {
-					e.printStackTrace();
-				}
-			}
-			*/
 			comandoJ(state, opCode, address);
 		} else {
 			// Tipo I
@@ -334,83 +297,13 @@ public class MyMIPS implements MIPS{
 			instrucao = instrucao - (rs << location_rs);
 			rt = instrucao >>> location_rt;
 			immediate = instrucao - (rt << location_rt);
-			/*
-			System.out.println("Tipo I\n"+"opCode: "+opCode+"\trs: "+rs+"\trt: "+rt+"\timmediate: "+immediate);
-			for (Field f : OPCODE.class.getDeclaredFields()) {
-				try {
-				if (f.getInt(null) == opCode) {
-					System.out.println(f.getName());
-					break;
-				}
-				} catch(Exception e) {
-					e.printStackTrace();
-				}
-			}
-			*/
 			comandoI(state, opCode, rs, rt, immediate);
 		}
 	}
 	
 	// Main que executará o console externo do simulador
 	public static void main(String[] args) {
-		/*
-		int s[] = {0b00000001010010110100100000100000, 
-				0b00100001010010010000000000000001, 
-				0b00100101010010010000000000000001, 
-				0b00000001010010110100100000100001, 
-				0b00000001010010110100100000100100, 
-				0b00110001010010010000000000000001, 
-				0b00010001001010101111111111111001, 
-				0b00010101001010101111111111111000, 
-				0b00001000000100000000000000000000, 
-				0b00001100000100000000000000000000, 
-				0b00000001001000000000000000001000, 
-				0b10010000000010010000000000000001, 
-				0b10010100000010010000000000000001, 
-				0b11000001010010010000000000000001, 
-				0b00111100000010010000000000000001, 
-				0b10001100000010010000000000000001, 
-				0b00000001010010110100100000100111, 
-				0b00000001010010110100100000100101, 
-				0b00110101010010010000000000000001, 
-				0b00000001010010110100100000101010, 
-				0b00101001010010010000000000000001, 
-				0b00101101010010010000000000000001, 
-				0b00000001010010110100100000101011, 
-				0b00000000000010100100100001000000, 
-				0b00000000000010100100100001000010, 
-				0b10100001010010010000000000000001, 
-				0b11100001010010010000000000000001, 
-				0b10100101010010010000000000000001, 
-				0b10101101010010010000000000000001, 
-				0b00000001010010110100100000100010, 
-				0b00000001010010110100100000100011, 
-				0b00010101011000000000000000000001, 
-				0b00000000000000000000000000001101, 
-				0b00000001010010110000000000011010, 
-				0b00000000000000000100100000010010, 
-				0b00010101011000000000000000000001, 
-				0b00000000000000000000000000001101, 
-				0b00000001010010110000000000011011, 
-				0b00000000000000000100100000010010, 
-				0b11000101010000010000000000000001, 
-				0b11010101010000010000000000000001, 
-				0b00000000000000000100100000010000, 
-				0b00000000000000000100100000010010, 
-				0b01000000000010010000100000000000, 
-				0b00000001001010100000000000011000, 
-				0b00000000000010100100100001000011, 
-				0b11100101010000010000000000000001, 
-				0b11110101010000010000000000000001};*/
 		try {
-			/*
-			int j = 0;
-			for (int i : s) {
-				System.out.println(j+": "+Integer.toBinaryString(i));
-				executarInstrucao(null, i);
-				j++;
-			}
-			*/
 			Simulator.setMIPS(new MyMIPS());
 			Simulator.setLogLevel(Simulator.LogLevel.INFO);
 			Simulator.start();
