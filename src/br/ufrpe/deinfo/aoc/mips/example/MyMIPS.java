@@ -71,17 +71,17 @@ public class MyMIPS implements MIPS{
 			immediate = immediate + 0xffff0000;
 		}
 		switch(opCode) {
-			case OPCODE.addi: {
-				state.writeRegister(rt,  state.readRegister(rs) + immediate);
+			case OPCODE.addi: { // R[rt] = R[rs] + SignExtImm
+				state.writeRegister(rt, ((int) state.readRegister(rs)) + immediate);
 				// Overflow ?
 				break;
 			}
-			case OPCODE.addiu: {
-				state.writeRegister(rt, state.readRegister(rs) + immediate);
+			case OPCODE.addiu: { // R[rt] = R[rs] + SignExtImm
+				state.writeRegister(rt, ((int) state.readRegister(rs)) + immediate);
 				break;
 			}
-			case OPCODE.andi: {
-				// TODO andi
+			case OPCODE.andi: { // R[rt] = R[rs] & ZeroExtImm
+				state.writeRegister(rt, ((int) state.readRegister(rs)) & immediate);
 				break;
 			}
 			case OPCODE.beq: {
@@ -112,8 +112,8 @@ public class MyMIPS implements MIPS{
 				// TODO lw
 				break;
 			}
-			case OPCODE.ori: {
-				// TODO ori
+			case OPCODE.ori: { // R[rt] = R[rs] | ZeroExtImm
+				state.writeRegister(rt, ((int) state.readRegister(rs)) | immediate );
 				break;
 			}
 			case OPCODE.slti: {
@@ -181,16 +181,16 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.nor: { // R[rd] = ~(R[rs] | R[rt])
-					state.writeRegister(rd, ~(state.readRegister(rs) | state.readRegister(rt)) );
+					state.writeRegister(rd, ~( ((int) state.readRegister(rs)) | ((int) state.readRegister(rt))) );
 					break;
 				}
 				case FUNCT.or: { // R[rd] = R[rs] | R[rt]
-					state.writeRegister(rd, (state.readRegister(rs) | state.readRegister(rt)) );
+					state.writeRegister(rd, ( ((int) state.readRegister(rs)) | ((int) state.readRegister(rt))) );
 					break;
 				}
 				case FUNCT.slt: { // R[rd] = (R[rs] < R[rt]) ? 1 : 0
 					state.writeRegister(rd, ( ( (int) state.readRegister(rs) ) 
-												< ( (int) state.readRegister(rt) ) ? 1 : 0 ) );
+													< ( (int) state.readRegister(rt) ) ? 1 : 0 ) );
 					break;
 				}
 				case FUNCT.sltu: { 
