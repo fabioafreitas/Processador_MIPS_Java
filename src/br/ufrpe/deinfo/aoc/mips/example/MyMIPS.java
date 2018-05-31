@@ -2,7 +2,10 @@ package br.ufrpe.deinfo.aoc.mips.example;
 
 import java.io.IOException;
 
+import br.ufrpe.deinfo.aoc.mips.CommandNotFoundException;
+import br.ufrpe.deinfo.aoc.mips.InvalidMemoryAlignmentExpcetion;
 import br.ufrpe.deinfo.aoc.mips.MIPS;
+import br.ufrpe.deinfo.aoc.mips.MemoryOutOfBoundsException;
 import br.ufrpe.deinfo.aoc.mips.Simulator;
 import br.ufrpe.deinfo.aoc.mips.State;
 import jline.console.ConsoleReader;
@@ -35,6 +38,7 @@ public class MyMIPS implements MIPS{
 	 * na arquitetura MIPS cada endereço de memória possui 4 Bytes, ou seja, 32
 	 * bits.
 	 */
+	private static int memorySize = 1 << 26;
 	@Override
 	public void execute(State state) throws Exception {
 		/*  Se o Adress de PC for 0x00000000, então
@@ -57,14 +61,18 @@ public class MyMIPS implements MIPS{
 		}
 		int PC = state.getPC();
 		int instrucaoAtual = state.readInstructionMemory(PC);
-		executarInstrucao(state, instrucaoAtual);
+		try {
+			executarInstrucao(state, instrucaoAtual);
+		} catch (MemoryOutOfBoundsException | InvalidMemoryAlignmentExpcetion e) {
+			Simulator.info(e.getMessage());
+		}
 		if ( PC == state.getPC() ) {
 			state.setPC(state.getPC()+4); // somando 4 bytes no valor do PC
 		}
 	}
 	
 	// comandos do tipo I
-	public static void comandoI(State state, int opCode, int rs, int rt, int immediate) throws IOException{
+	public static void comandoI(State state, int opCode, int rs, int rt, int immediate) throws Exception{
 		if (immediate >= 0b1000000000000000) {
 			
 			// converte de complemento a 2 16 bit para 32 bit
@@ -104,16 +112,24 @@ public class MyMIPS implements MIPS{
 				break;
 			}
 			case OPCODE.lbu: { // R[rt]={24’b0,M[R[rs]+SignExtImm](7:0)}
-				// TODO não sei se o unsigned muda em algo, NÃO SEI SE ESTÁ CERTO
-				Integer address = state.readWordDataMemory(state.readRegister(rs)+immediate);
-				Integer halfWord = 0x000000ff & address;
+				int address = state.readRegister(rs)+immediate;
+				if (Integer.compareUnsigned(address, memorySize) >= 0)
+					throw new MemoryOutOfBoundsException("Endereço ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando lbu");
+				Integer word = state.readWordDataMemory(address);
+				Integer halfWord = 0x000000ff & word;
 				state.writeRegister(rt, halfWord);
 				break;
 			}
 			case OPCODE.lhu: { // R[rt]={16’b0,M[R[rs] +SignExtImm](15:0)}
-				// TODO não sei se o unsigned muda em algo, NÃO SEI SE ESTÁ CERTO
-				Integer address = state.readWordDataMemory(state.readRegister(rs)+immediate);
-				Integer halfWord = 0x0000ffff & address;
+				int address = state.readRegister(rs)+immediate;
+				if (Integer.compareUnsigned(address, memorySize) >= 0)
+					throw new MemoryOutOfBoundsException("Endereço ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando lhu");
+				boolean divisivelPor2 = (address & 1) == 0;
+				// se address for divisivel por 2 o ultimo bit é 0
+				if (divisivelPor2)
+					throw new InvalidMemoryAlignmentExpcetion("Endereço não alinhado ("+Integer.toHexString(address)+") em comando lhu");
+				Integer word = state.readWordDataMemory(address);
+				Integer halfWord = 0x0000ffff & word;
 				state.writeRegister(rt, halfWord);
 				break;
 			}
@@ -126,6 +142,13 @@ public class MyMIPS implements MIPS{
 			}
 			case OPCODE.lw: { // R[rt] = M[R[rs]+SignExtImm]
 				// NÃO SEI SE ESTÁ CERTO
+				int address = state.readRegister(rs)+immediate;
+				if (Integer.compareUnsigned(address, memorySize) >= 0)
+					throw new MemoryOutOfBoundsException("Endereço ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando lw");
+				boolean divisivelPor4 = (address & 0b11) == 0;
+				// se address for divisivel por 4 os 2 ultimos bits são 0
+				if (divisivelPor4)
+					throw new InvalidMemoryAlignmentExpcetion("Endereço não alinhado ("+Integer.toHexString(address)+") em comando lw");
 				state.writeRegister(rt, state.readWordDataMemory(state.readRegister(rs)+immediate));
 				break;
 			}
@@ -142,20 +165,36 @@ public class MyMIPS implements MIPS{
 				break;
 			}
 			case OPCODE.sb: { // M[R[rs]+SignExtImm](7:0) = R[rt](7:0)
+				int address = state.readRegister(rs)+immediate;
+				if (Integer.compareUnsigned(address, memorySize) >= 0)
+					throw new MemoryOutOfBoundsException("Endereço ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando sb");
 				Integer byteWord = 0x000000ff & state.readRegister(rt);
-				state.writeByteDataMemory(state.readRegister(rs)+immediate, byteWord);
+				state.writeByteDataMemory(address, byteWord);
 				break;
 			}
-			case OPCODE.sc: { // Nï¿½O ï¿½ PRA FAZER
-				break;        // Nï¿½O ï¿½ PRA FAZER
+			case OPCODE.sc: { // NÃO É PRA FAZER
+				break;        // NÃO É PRA FAZER
 			}
 			case OPCODE.sh: { // M[R[rs]+SignExtImm](15:0) = R[rt](15:0)
+				int address = state.readRegister(rs)+immediate;
+				if (Integer.compareUnsigned(address, memorySize) >= 0)
+					throw new MemoryOutOfBoundsException("Endereço ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando sh");
+				boolean divisivelPor2 = (address & 1) == 0;
+				if (divisivelPor2)
+					throw new InvalidMemoryAlignmentExpcetion("Endereço não alinhado ("+Integer.toHexString(address)+") em comando sh");
 				Integer halfWord = 0x0000ffff & state.readRegister(rt);
-				state.writeHalfwordDataMemory(state.readRegister(rs)+immediate, halfWord);
+				state.writeHalfwordDataMemory(address, halfWord);
 				break;
 			}
 			case OPCODE.sw: { // M[R[rs]+SignExtImm] = R[rt]
-				state.writeWordDataMemory(state.readRegister(rs)+immediate, state.readRegister(rt));
+				int address = state.readRegister(rs)+immediate;
+				if (Integer.compareUnsigned(address, memorySize) >= 0)
+					throw new MemoryOutOfBoundsException("Endereço ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando sw");
+				boolean divisivelPor4 = (address & 0b11) == 0;
+				// se address for divisivel por 4 os 2 ultimos bits são 0
+				if (divisivelPor4)
+					throw new InvalidMemoryAlignmentExpcetion("Endereço ("+Integer.toHexString(address)+") não alinhado em comando sw");
+				state.writeWordDataMemory(address, state.readRegister(rt));
 				break;
 			}
 			case OPCODE.lwc1: {
@@ -174,12 +213,15 @@ public class MyMIPS implements MIPS{
 				// TODO sdcl  UTILIZA O COPROCESSOR 1 DÚVIDA
 				break;
 			}
+			default: {
+				throw new CommandNotFoundException("Não foi possível encontrar o comando OPCODE = 0x+"+
+													Integer.toHexString(opCode)+" / 0b"+Integer.toBinaryString(opCode));
+			}
 		}
 	}
 	
 	// comandos do tipo R
-	public static void comandoR(State state, int opCode, int rs, int rt, int rd, int shamt, int funct) throws IOException{
-		
+	public static void comandoR(State state, int opCode, int rs, int rt, int rd, int shamt, int funct) throws Exception{
 		if (opCode == 0x0) {
 			switch (funct) {
 				case FUNCT.add: { // R[rd] = R[rs] + R[rt]
@@ -195,7 +237,14 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.jr: { // PC=R[rs]
-					state.setPC(state.readRegister(rs));
+					int address = state.readRegister(rs);
+					if (Integer.compareUnsigned(address, memorySize) >= 0)
+						throw new MemoryOutOfBoundsException("Endereço no registrador #"+rs+"("+ Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando jr");
+					boolean divisivelPor4 = (rs & 3) == 0; // 3 em binario é 11, número é divisível por 4 se os 2 primeiros bits são 0
+					if (!divisivelPor4)
+						throw new InvalidMemoryAlignmentExpcetion("Endereço no registrador #"+ rs+" ("+Integer.toHexString(address)+") "+
+																  "não alinhado em comando jr");
+					state.setPC(address);
 					break;
 				}
 				case FUNCT.nor: { // R[rd] = ~(R[rs] | R[rt])
@@ -260,6 +309,11 @@ public class MyMIPS implements MIPS{
 					state.writeRegister(rd, state.readRegister(rt) >>> shamt);
 					break;
 				}
+				default: {
+					throw new CommandNotFoundException("Não foi possível encontrar o comando FUNCT = 0x"+
+														Integer.toBinaryString(funct)+ " / 0b"+
+														Integer.toBinaryString(funct));
+				}
 			}
 		} else if (opCode == 0x10) {
 			if (funct == FUNCT.mfc0) {
@@ -285,7 +339,7 @@ public class MyMIPS implements MIPS{
 	public MyMIPS() throws IOException {
 		this.console = Simulator.getConsole();
 	}
-	public static void executarInstrucao (State state, int instrucao) throws IOException {
+	public static void executarInstrucao (State state, int instrucao) throws Exception {
 		// Formatacao
 		int location_opcode = 26,
 		location_rs = 21,
