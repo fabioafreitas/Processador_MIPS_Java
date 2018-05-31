@@ -22,43 +22,45 @@ public class MyMIPS implements MIPS{
 		sra = 0x3;
 		private FUNCT() {}
 	}
-	// Atributo que representa o console externo, serï¿½ manipulado no main
+	// Atributo que representa o console externo, será manipulado no main
 	@SuppressWarnings("unused")
 	private ConsoleReader console;
 	
-	/* Este mï¿½todo executa uma instruï¿½ï¿½o por vez
+	/* Este método executa uma instrução por vez
 	 * 
-	 * Recebe a instruï¿½ï¿½o atual que estï¿½ armazenada no registrador PC
-	 * Program Counter. Esta instruï¿½ï¿½o ï¿½ manipulada de acordo com seu tipo: I, R, J.
+	 * Recebe a instrução atual que está armazenada no registrador PC
+	 * Program Counter. Esta instrução é manipulada de acordo com seu tipo: I, R, J.
 	 * 
-	 * Apï¿½s a iteraï¿½ï¿½o da instruï¿½ï¿½o atual o PC ï¿½ incrementado em 4 Bytes, pois
-	 * na arquitetura MIPS cada endereï¿½o de memï¿½ria possui 4 Bytes, ou seja, 32
+	 * Após a iteração da instrução atual o PC é incrementado em 4 Bytes, pois
+	 * na arquitetura MIPS cada endereço de memória possui 4 Bytes, ou seja, 32
 	 * bits.
 	 */
 	@Override
 	public void execute(State state) throws Exception {
-		/*  Se o Adress de PC for 0x00000000, entï¿½o
-		 *	alteramos o endereï¿½o de $gp com 0x00001800
-		 *	e o endereï¿½o de $sp com 0x00003ffc.
+		/*  Se o Adress de PC for 0x00000000, então
+		 *	alteramos o endereço de $gp com 0x00001800
+		 *	e o endereço de $sp com 0x00003ffc.
 		 *
-		 *	CARACTERï¿½STICAS DO MEMORY
+		 *	CARACTERÍSTICAS DO MEMORY
 		 *  CONFIGURATION DO MARS4_5
 		 *	
 		 *	precisamos alterar esses registradores
-		 *  pois nesse simulador nï¿½o possuimos 4gb
-		 *  de memï¿½ria.
+		 *  pois nesse simulador não possuimos 4gb
+		 *  de memória.
 		 *  
-		 *  $gp ï¿½ o registrador 28
-		 *  $sp ï¿½ o registrador 29
+		 *  $gp é o registrador 28
+		 *  $sp é o registrador 29
 		 */
 		if(state.getPC().equals(0)) {
 			state.writeRegister(28, 0x1800);
 			state.writeRegister(29, 0x3ffc);
 		}
-		
-		int instrucaoAtual = state.readInstructionMemory(state.getPC()).intValue();
+		int PC = state.getPC();
+		int instrucaoAtual = state.readInstructionMemory(PC);
 		executarInstrucao(state, instrucaoAtual);
-		state.setPC(state.getPC()+4); // somando 4 bytes no valor do PC
+		if ( PC == state.getPC() ) {
+			state.setPC(state.getPC()+4); // somando 4 bytes no valor do PC
+		}
 	}
 	
 	// comandos do tipo I
@@ -70,17 +72,16 @@ public class MyMIPS implements MIPS{
 		}
 		switch(opCode) {
 			case OPCODE.addi: { // R[rt] = R[rs] + SignExtImm
-				state.writeRegister(rt, ((int) state.readRegister(rs)) + immediate);
+				state.writeRegister(rt, state.readRegister(rs) + immediate);
 				// Overflow ?
 				break;
 			}
 			case OPCODE.addiu: { // R[rt] = R[rs] + SignExtImm
-				state.writeRegister(rt, ((int) state.readRegister(rs)) + immediate);
+				state.writeRegister(rt, state.readRegister(rs) + immediate);
 				break;
 			}
 			case OPCODE.andi: { // R[rt] = R[rs] & ZeroExtImm
-				state.writeRegister(rt, ((int) state.readRegister(rs)) & immediate);
-				break;
+				state.writeRegister(rt, state.readRegister(rs) & immediate);
 			}
 			case OPCODE.beq: { //if(R[rs]==R[rt]) faca->  PC=PC+4+BranchAddr
 				int branchaddr = immediate << 2;
@@ -102,29 +103,29 @@ public class MyMIPS implements MIPS{
 				}
 				break;
 			}
-			case OPCODE.lbu: { // R[rt]={24ï¿½b0,M[R[rs]+SignExtImm](7:0)}
-				// TODO nï¿½o sei se o unsigned muda em algo, Nï¿½O SEI SE ESTï¿½ CERTO
+			case OPCODE.lbu: { // R[rt]={24’b0,M[R[rs]+SignExtImm](7:0)}
+				// TODO não sei se o unsigned muda em algo, NÃO SEI SE ESTÁ CERTO
 				Integer address = state.readWordDataMemory(state.readRegister(rs)+immediate);
 				Integer halfWord = 0x000000ff & address;
 				state.writeRegister(rt, halfWord);
 				break;
 			}
-			case OPCODE.lhu: { // R[rt]={16ï¿½b0,M[R[rs] +SignExtImm](15:0)}
-				// TODO nï¿½o sei se o unsigned muda em algo, Nï¿½O SEI SE ESTï¿½ CERTO
+			case OPCODE.lhu: { // R[rt]={16’b0,M[R[rs] +SignExtImm](15:0)}
+				// TODO não sei se o unsigned muda em algo, NÃO SEI SE ESTÁ CERTO
 				Integer address = state.readWordDataMemory(state.readRegister(rs)+immediate);
 				Integer halfWord = 0x0000ffff & address;
 				state.writeRegister(rt, halfWord);
 				break;
 			}
-			case OPCODE.ll: { // Nï¿½O ï¿½ PRA FAZER
-				break;        // Nï¿½O ï¿½ PRA FAZER  
+			case OPCODE.ll: { // NÃO É PRA FAZER
+				break;        // NÃO É PRA FAZER  
 			}
-			case OPCODE.lui: { // R[rt] = {imm, 16ï¿½b0}
+			case OPCODE.lui: { // R[rt] = {imm, 16’b0}
 				state.writeRegister(rt, immediate<<16);
 				break;
 			}
 			case OPCODE.lw: { // R[rt] = M[R[rs]+SignExtImm]
-				// Nï¿½O SEI SE ESTï¿½ CERTO
+				// NÃO SEI SE ESTÁ CERTO
 				state.writeRegister(rt, state.readWordDataMemory(state.readRegister(rs)+immediate));
 				break;
 			}
@@ -158,19 +159,19 @@ public class MyMIPS implements MIPS{
 				break;
 			}
 			case OPCODE.lwc1: {
-				// TODO lwcl  UTILIZA O COPROCESSOR 1 Dï¿½VIDA
+				// TODO lwcl  UTILIZA O COPROCESSOR 1 DÚVIDA
 				break;
 			}
 			case OPCODE.ldc1: {
-				// TODO ldcl  UTILIZA O COPROCESSOR 1 Dï¿½VIDA
+				// TODO ldcl  UTILIZA O COPROCESSOR 1 DÚVIDA
 				break;
 			}
 			case OPCODE.swc1: {
-				// TODO swcl  UTILIZA O COPROCESSOR 1 Dï¿½VIDA
+				// TODO swcl  UTILIZA O COPROCESSOR 1 DÚVIDA
 				break;
 			}
 			case OPCODE.sdc1: {
-				// TODO sdcl  UTILIZA O COPROCESSOR 1 Dï¿½VIDA
+				// TODO sdcl  UTILIZA O COPROCESSOR 1 DÚVIDA
 				break;
 			}
 		}
@@ -236,23 +237,23 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.divu: {
-					// TODO divu   UTILIZA OS REGISTRADORES HI E LO Dï¿½VIDA
+					// TODO divu   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.mfhi: {
-					// TODO mfhi   UTILIZA OS REGISTRADORES HI E LO Dï¿½VIDA
+					// TODO mfhi   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.mflo: {
-					// TODO mflo   UTILIZA OS REGISTRADORES HI E LO Dï¿½VIDA
+					// TODO mflo   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.mult: {
-					// TODO mult   UTILIZA OS REGISTRADORES HI E LO Dï¿½VIDA
+					// TODO mult   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.multu: {
-					// TODO multu   UTILIZA OS REGISTRADORES HI E LO Dï¿½VIDA
+					// TODO multu   UTILIZA OS REGISTRADORES HI E LO DÚVIDA
 					break;
 				}
 				case FUNCT.sra: { // R[rd] = R[rt] >>> shamt
@@ -262,18 +263,21 @@ public class MyMIPS implements MIPS{
 			}
 		} else if (opCode == 0x10) {
 			if (funct == FUNCT.mfc0) {
-				// TODO mfc0 UTILIZA O COPRESSADOR 0 Dï¿½VIDA
+				// TODO mfc0 UTILIZA O COPRESSADOR 0 DÚVIDA
 			}
 		}
 	}
 	
 	// comandos do tipo J
 	public static void comandoJ(State state, int opCode, int address) throws IOException{
+		int conc = 0xf0000000; // primeiros 4 bits são 1
+		int jumpAddress = ( address << 2 ); // address * 4
+		jumpAddress = jumpAddress + (state.getPC() & conc); // concatenar 4 primeiros bits de PC com address << 2 
 		if (opCode == OPCODE.j) {
-			state.setPC(address);
+			state.setPC(jumpAddress);
 		} else {
 			state.writeRegister(31, state.getPC()+4); //talvez seja +8 por causa do branch delay slot ou nao
-			state.setPC(address);
+			state.setPC(jumpAddress);
 		}
 	}
 	
@@ -317,8 +321,7 @@ public class MyMIPS implements MIPS{
 			comandoI(state, opCode, rs, rt, immediate);
 		}
 	}
-	
-	// Main que executarï¿½ o console externo do simulador
+	// Main que executará o console externo do simulador
 	public static void main(String[] args) {
 		try {
 			Simulator.setMIPS(new MyMIPS());
