@@ -1,7 +1,6 @@
 package br.ufrpe.deinfo.aoc.mips.example;
 
 import java.io.IOException;
-
 import br.ufrpe.deinfo.aoc.mips.CommandNotFoundException;
 import br.ufrpe.deinfo.aoc.mips.InvalidMemoryAlignmentExpcetion;
 import br.ufrpe.deinfo.aoc.mips.MIPS;
@@ -12,70 +11,83 @@ import jline.console.ConsoleReader;
 
 public class MyMIPS implements MIPS{
 	private static class OPCODE {
-		public static final int addi = 0x8, addiu =0x9, andi= 0xc, beq = 0x4, bne =0x5, j = 0x2,
-		jal = 0x3, lbu = 0x24, lhu = 0x25, ll = 0x30, lui = 0xf, lw = 0x23, ori = 0xd, slti = 0xa,
-		sltiu = 0xb, sb = 0x28, sc = 0x38, sh = 0x29, sw = 0x2b, lwc1 = 0x31, ldc1 = 0x35,
-		swc1 = 0x39, sdc1 = 0x3d, mfc0 = 0x10;
+		@SuppressWarnings("unused")
+		public static final int addi = 0x8, addiu = 0x9, andi= 0xc, beq = 0x4, bne =0x5, j = 0x2,
+		jal = 0x3, lb = 0x20, lh = 0x21, lbu = 0x24, lhu = 0x25, ll = 0x30, lui = 0xf, lw = 0x23,
+		ori = 0xd, slti = 0xa, sltiu = 0xb, sb = 0x28, sc = 0x38, sh = 0x29, sw = 0x2b, lwc1 = 0x31,
+		ldc1 = 0x35, swc1 = 0x39, sdc1 = 0x3d, mfc0 = 0x10;
 		private OPCODE() {}
 	}
 	private static class FUNCT {
+		@SuppressWarnings("unused")
 		public static final int add = 0x20, addu = 0x21, and = 0x24, jr = 0x8, nor = 0x27,
 		or = 0x25, slt = 0x2a, sltu = 0x2b, sll = 0x0, srl = 0x2, sub = 0x22, subu = 0x23,
 		div = 0x1a, divu = 0x1b, mfhi = 0x10, mflo = 0x12, mfc0 = 0x0, mult = 0x18, multu = 0x19,
 		sra = 0x3;
 		private FUNCT() {}
 	}
-	// Atributo que representa o console externo, ser√° manipulado no main
+	
+	private static class PCEqualsNewPCException extends Exception {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 6134942587296821954L;
+
+		public PCEqualsNewPCException() {
+			super();
+		}
+	}
+	// Atributo que representa o console externo, ser· manipulado no main
 	@SuppressWarnings("unused")
 	private ConsoleReader console;
 	
-	/* Este m√©todo executa uma instru√ß√£o por vez
+	/* Este mÈtodo executa uma instruÁ„o por vez
 	 * 
-	 * Recebe a instru√ß√£o atual que est√° armazenada no registrador PC
-	 * Program Counter. Esta instru√ß√£o √© manipulada de acordo com seu tipo: I, R, J.
+	 * Recebe a instruÁ„o atual que est· armazenada no registrador PC
+	 * Program Counter. Esta instruÁ„o È manipulada de acordo com seu tipo: I, R, J.
 	 * 
-	 * Ap√≥s a itera√ß√£o da instru√ß√£o atual o PC √© incrementado em 4 Bytes, pois
-	 * na arquitetura MIPS cada endere√ßo de mem√≥ria possui 4 Bytes, ou seja, 32
+	 * ApÛs a iteraÁ„o da instruÁ„o atual o PC È incrementado em 4 Bytes, pois
+	 * na arquitetura MIPS cada endereÁo de memÛria possui 4 Bytes, ou seja, 32
 	 * bits.
 	 */
-	private static int memorySize = 1 << 26;
 	@Override
 	public void execute(State state) throws Exception {
-		/*  Se o Adress de PC for 0x00000000, ent√£o
-		 *	alteramos o endere√ßo de $gp com 0x00001800
-		 *	e o endere√ßo de $sp com 0x00003ffc.
+		/*  Se o Adress de PC for 0x00000000, ent„o
+		 *	alteramos o endereÁo de $gp com 0x00001800
+		 *	e o endereÁo de $sp com 0x00003ffc.
 		 *
-		 *	CARACTER√çSTICAS DO MEMORY
+		 *	CARACTERÕSTICAS DO MEMORY
 		 *  CONFIGURATION DO MARS4_5
 		 *	
 		 *	precisamos alterar esses registradores
-		 *  pois nesse simulador n√£o possuimos 4gb
-		 *  de mem√≥ria.
+		 *  pois nesse simulador n„o possuimos 4gb
+		 *  de memÛria.
 		 *  
-		 *  $gp √© o registrador 28
-		 *  $sp √© o registrador 29
+		 *  $gp È o registrador 28
+		 *  $sp È o registrador 29
 		 */
 		if(state.getPC().equals(0)) {
 			state.writeRegister(28, 0x1800);
 			state.writeRegister(29, 0x3ffc);
 		}
 		int PC = state.getPC();
+		if (PC >= State.MEMORY_SIZE)
+			throw new MemoryOutOfBoundsException();
+		boolean divisivelPor4 = (PC & 0b11) == 0;
+		if (!divisivelPor4)
+			throw new InvalidMemoryAlignmentExpcetion();
 		int instrucaoAtual = state.readInstructionMemory(PC);
 		try {
 			executarInstrucao(state, instrucaoAtual);
-		} catch (MemoryOutOfBoundsException | InvalidMemoryAlignmentExpcetion e) {
-			Simulator.info(e.getMessage());
-		}
-		if ( PC == state.getPC() ) {
-			state.setPC(state.getPC()+4); // somando 4 bytes no valor do PC
-		}
+			if ( PC == state.getPC() )
+				state.setPC(PC+4); // somando 4 bytes no valor do PC
+		} catch (PCEqualsNewPCException e) { }
 	}
 	
 	// comandos do tipo I
 	public static void comandoI(State state, int opCode, int rs, int rt, int immediate) throws Exception{
 		if (immediate >= 0b1000000000000000) {
-			
-			// converte de complemento a 2 16 bit para 32 bit
+			// converte de complemento a 2 16 bit para 32 bit (Sign Extend)
 			immediate = immediate + 0xffff0000;
 		}
 		switch(opCode) {
@@ -90,65 +102,95 @@ public class MyMIPS implements MIPS{
 			}
 			case OPCODE.andi: { // R[rt] = R[rs] & ZeroExtImm
 				state.writeRegister(rt, state.readRegister(rs) & immediate);
+				break;
 			}
 			case OPCODE.beq: { //if(R[rs]==R[rt]) faca->  PC=PC+4+BranchAddr
+				int PC = state.getPC();
 				int branchaddr = immediate << 2;
-				if(state.readRegister(rs).intValue() == state.readRegister(rt).intValue()){				
-					state.setPC(state.getPC()+4+branchaddr);
-				}
-				else{
-					state.setPC(state.getPC()+4);
+				int newPC = PC+4+branchaddr;
+				if(state.readRegister(rs).intValue() == state.readRegister(rt).intValue()){
+					state.setPC(newPC);
+					if (PC == newPC)
+						throw new MyMIPS.PCEqualsNewPCException();
 				}
 				break;
 			}
 			case OPCODE.bne: { //if(R[rs]!=R[rt]) faca->  PC=PC+4+BranchAddr
+				int PC = state.getPC();
 				int branchaddr = immediate << 2;
+				int newPC = PC+4+branchaddr;
 				if( state.readRegister(rs).intValue() != state.readRegister(rt).intValue() ){
-					state.setPC(state.getPC()+4+branchaddr);
-				}
-				else{
-					state.setPC(state.getPC()+4);
+					state.setPC(newPC);
+					if (PC == newPC)
+						throw new MyMIPS.PCEqualsNewPCException();
 				}
 				break;
 			}
-			case OPCODE.lbu: { // R[rt]={24'b0,M[R[rs]+SignExtImm](7:0)}
+			case OPCODE.lb: {
 				int address = state.readRegister(rs)+immediate;
-				if (Integer.compareUnsigned(address, memorySize) >= 0)
-					throw new MemoryOutOfBoundsException("Endere√ßo ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando lbu");
+				if (Integer.compareUnsigned(address, State.MEMORY_SIZE) >= 0)
+					throw new MemoryOutOfBoundsException();
 				Integer word = state.readWordDataMemory(address);
-				Integer halfWord = 0x000000ff & word;
+				int _byte = 0x000000ff & word;
+				if (_byte >= 0b10000000) {
+					// Sign extend
+					_byte = 0xffffff00 + _byte;
+				}
+				state.writeRegister(rt, _byte);
+				break;
+			}
+			case OPCODE.lh: {
+				int address = state.readRegister(rs)+immediate;
+				if (Integer.compareUnsigned(address, State.MEMORY_SIZE) >= 0)
+					throw new MemoryOutOfBoundsException();
+				boolean divisivelPor2 = (address & 1) == 0;
+				// se address for divisivel por 2 o ultimo bit È 0
+				if (!divisivelPor2)
+					throw new InvalidMemoryAlignmentExpcetion();
+				Integer word = state.readWordDataMemory(address);
+				int halfWord = 0x0000ffff & word;
+				if (halfWord >= 0b1000000000000000) {
+					// Sign extend
+					halfWord = 0xffff0000 + halfWord;
+				}
 				state.writeRegister(rt, halfWord);
 				break;
 			}
-			case OPCODE.lhu: { // R[rt]={16'b0,M[R[rs] +SignExtImm](15:0)}
+			case OPCODE.lbu: { // R[rt]={24íb0,M[R[rs]+SignExtImm](7:0)}
 				int address = state.readRegister(rs)+immediate;
-				if (Integer.compareUnsigned(address, memorySize) >= 0)
-					throw new MemoryOutOfBoundsException("Endere√ßo ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando lhu");
+				if (Integer.compareUnsigned(address, State.MEMORY_SIZE) >= 0)
+					throw new MemoryOutOfBoundsException();
+				Integer word = state.readWordDataMemory(address);
+				Integer _byte = 0x000000ff & word;
+				state.writeRegister(rt, _byte);
+				break;
+			}
+			case OPCODE.lhu: { // R[rt]={16íb0,M[R[rs] +SignExtImm](15:0)}
+				int address = state.readRegister(rs)+immediate;
+				if (Integer.compareUnsigned(address, State.MEMORY_SIZE) >= 0)
+					throw new MemoryOutOfBoundsException();
 				boolean divisivelPor2 = (address & 1) == 0;
-				// se address for divisivel por 2 o ultimo bit √© 0
+				// se address for divisivel por 2 o ultimo bit È 0
 				if (!divisivelPor2)
-					throw new InvalidMemoryAlignmentExpcetion("Endere√ßo n√£o alinhado ("+Integer.toHexString(address)+") em comando lhu");
+					throw new InvalidMemoryAlignmentExpcetion();
 				Integer word = state.readWordDataMemory(address);
 				Integer halfWord = 0x0000ffff & word;
 				state.writeRegister(rt, halfWord);
 				break;
 			}
-			case OPCODE.ll: { // N√ÉO √â PRA FAZER
-				break;        // N√ÉO √â PRA FAZER  
-			}
-			case OPCODE.lui: { // R[rt] = {imm, 16'b0}
+			case OPCODE.lui: { // R[rt] = {imm, 16íb0}
 				state.writeRegister(rt, immediate<<16);
 				break;
 			}
 			case OPCODE.lw: { // R[rt] = M[R[rs]+SignExtImm]
-				// N√ÉO SEI SE EST√Å CERTO
+				// N√O SEI SE EST¡ CERTO
 				int address = state.readRegister(rs)+immediate;
-				if (Integer.compareUnsigned(address, memorySize) >= 0)
-					throw new MemoryOutOfBoundsException("Endere√ßo ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando lw");
+				if (Integer.compareUnsigned(address, State.MEMORY_SIZE) >= 0)
+					throw new MemoryOutOfBoundsException();
 				boolean divisivelPor4 = (address & 0b11) == 0;
-				// se address for divisivel por 4 os 2 ultimos bits s√£o 0
+				// se address for divisivel por 4 os 2 ultimos bits s„o 0
 				if (!divisivelPor4)
-					throw new InvalidMemoryAlignmentExpcetion("Endere√ßo n√£o alinhado ("+Integer.toHexString(address)+") em comando lw");
+					throw new InvalidMemoryAlignmentExpcetion();
 				state.writeRegister(rt, state.readWordDataMemory(state.readRegister(rs)+immediate));
 				break;
 			}
@@ -166,56 +208,36 @@ public class MyMIPS implements MIPS{
 			}
 			case OPCODE.sb: { // M[R[rs]+SignExtImm](7:0) = R[rt](7:0)
 				int address = state.readRegister(rs)+immediate;
-				if (Integer.compareUnsigned(address, memorySize) >= 0)
-					throw new MemoryOutOfBoundsException("Endere√ßo ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando sb");
+				if (Integer.compareUnsigned(address, State.MEMORY_SIZE) >= 0)
+					throw new MemoryOutOfBoundsException();
 				Integer byteWord = 0x000000ff & state.readRegister(rt);
 				state.writeByteDataMemory(address, byteWord);
 				break;
 			}
-			case OPCODE.sc: { // N√ÉO √â PRA FAZER
-				break;        // N√ÉO √â PRA FAZER
-			}
 			case OPCODE.sh: { // M[R[rs]+SignExtImm](15:0) = R[rt](15:0)
 				int address = state.readRegister(rs)+immediate;
-				if (Integer.compareUnsigned(address, memorySize) >= 0)
-					throw new MemoryOutOfBoundsException("Endere√ßo ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando sh");
+				if (Integer.compareUnsigned(address, State.MEMORY_SIZE) >= 0)
+					throw new MemoryOutOfBoundsException();
 				boolean divisivelPor2 = (address & 1) == 0;
 				if (!divisivelPor2)
-					throw new InvalidMemoryAlignmentExpcetion("Endere√ßo n√£o alinhado ("+Integer.toHexString(address)+") em comando sh");
+					throw new InvalidMemoryAlignmentExpcetion();
 				Integer halfWord = 0x0000ffff & state.readRegister(rt);
 				state.writeHalfwordDataMemory(address, halfWord);
 				break;
 			}
 			case OPCODE.sw: { // M[R[rs]+SignExtImm] = R[rt]
 				int address = state.readRegister(rs)+immediate;
-				if (Integer.compareUnsigned(address, memorySize) >= 0)
-					throw new MemoryOutOfBoundsException("Endere√ßo ("+Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando sw");
+				if (Integer.compareUnsigned(address, State.MEMORY_SIZE) >= 0)
+					throw new MemoryOutOfBoundsException();
 				boolean divisivelPor4 = (address & 0b11) == 0;
-				// se address for divisivel por 4 os 2 ultimos bits sÔøΩo 0
+				// se address for divisivel por 4 os 2 ultimos bits s„o 0
 				if (!divisivelPor4)
-					throw new InvalidMemoryAlignmentExpcetion("Endere√ßo ("+Integer.toHexString(address)+") n√£o alinhado em comando sw");
+					throw new InvalidMemoryAlignmentExpcetion();
 				state.writeWordDataMemory(address, state.readRegister(rt));
 				break;
 			}
-			case OPCODE.lwc1: {
-				// TODO lwcl  UTILIZA O COPROCESSOR 1 DÔøΩVIDA
-				break;
-			}
-			case OPCODE.ldc1: {
-				// TODO ldcl  UTILIZA O COPROCESSOR 1 DÔøΩVIDA
-				break;
-			}
-			case OPCODE.swc1: {
-				// TODO swcl  UTILIZA O COPROCESSOR 1 DÔøΩVIDA
-				break;
-			}
-			case OPCODE.sdc1: {
-				// TODO sdcl  UTILIZA O COPROCESSOR 1 DÔøΩVIDA
-				break;
-			}
 			default: {
-				throw new CommandNotFoundException("N√£o foi pos√≠vel encontrar o comando OPCODE = 0x+"+
-													Integer.toHexString(opCode)+" / 0b"+Integer.toBinaryString(opCode));
+				throw new CommandNotFoundException();
 			}
 		}
 	}
@@ -237,14 +259,7 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.jr: { // PC=R[rs]
-					int address = state.readRegister(rs);
-					if (Integer.compareUnsigned(address, memorySize) >= 0)
-						throw new MemoryOutOfBoundsException("Endere√ßo no registrador #"+rs+"("+ Integer.toHexString(address)+") fora dos limites ("+Integer.toHexString(memorySize)+") em comando jr");
-					boolean divisivelPor4 = (rs & 3) == 0; // 3 em binario √© 11, n√∫mero √© divis√≠vel por 4 se os 2 primeiros bits s√£o 0
-					if (!divisivelPor4)
-						throw new InvalidMemoryAlignmentExpcetion("Endere√ßo no registrador #"+ rs+" ("+Integer.toHexString(address)+") "+
-																  "n√£o alinhado em comando jr");
-					state.setPC(address);
+					state.setPC(state.readRegister(rs));
 					break;
 				}
 				case FUNCT.nor: { // R[rd] = ~(R[rs] | R[rt])
@@ -281,58 +296,34 @@ public class MyMIPS implements MIPS{
 					state.writeRegister(rd, state.readRegister(rs) - state.readRegister(rt));
 					break;
 				}
-				case FUNCT.div: {
-					// TODO div   UTILIZA OS REGISTRADORES HI E LO D√öVIDA
-					break;
-				}
-				case FUNCT.divu: {
-					// TODO divu   UTILIZA OS REGISTRADORES HI E LO D√öVIDA
-					break;
-				}
-				case FUNCT.mfhi: {
-					// TODO mfhi   UTILIZA OS REGISTRADORES HI E LO D√öVIDA
-					break;
-				}
-				case FUNCT.mflo: {
-					// TODO mflo   UTILIZA OS REGISTRADORES HI E LO D√öVIDA
-					break;
-				}
-				case FUNCT.mult: {
-					// TODO mult   UTILIZA OS REGISTRADORES HI E LO D√öVIDA
-					break;
-				}
-				case FUNCT.multu: {
-					// TODO multu   UTILIZA OS REGISTRADORES HI E LO D√öVIDA
-					break;
-				}
 				case FUNCT.sra: { // R[rd] = R[rt] >>> shamt
 					state.writeRegister(rd, state.readRegister(rt) >>> shamt);
 					break;
 				}
 				default: {
-					throw new CommandNotFoundException("N√£o foi poss√≠vel encontrar o comando FUNCT = 0x"+
-														Integer.toBinaryString(funct)+ " / 0b"+
-														Integer.toBinaryString(funct));
+					throw new CommandNotFoundException();
 				}
 			}
-		} else if (opCode == 0x10) {
-			if (funct == FUNCT.mfc0) {
-				// TODO mfc0 UTILIZA O COPRESSADOR 0 D√öVIDA
-			}
+		} else {
+			throw new CommandNotFoundException();
 		}
 	}
 	
 	// comandos do tipo J
-	public static void comandoJ(State state, int opCode, int address) throws IOException{
-		int conc = 0xf0000000; // primeiros 4 bits s√£o 1
+	public static void comandoJ(State state, int opCode, int address) throws Exception{
+		int PC = state.getPC();
+		int conc = 0xf0000000; // primeiros 4 bits s„o 1
 		int jumpAddress = ( address << 2 ); // address * 4
-		jumpAddress = jumpAddress + (state.getPC() & conc); // concatenar 4 primeiros bits de PC com address << 2 
+		jumpAddress = jumpAddress + ( PC & conc ); // concatenar 4 primeiros bits de PC com address << 2 
 		if (opCode == OPCODE.j) {
 			state.setPC(jumpAddress);
-		} else {
-			state.writeRegister(31, state.getPC()+4); //talvez seja +8 por causa do branch delay slot ou nao
+		} else if (opCode == OPCODE.jal) {
+			state.writeRegister(31, PC+4); //talvez seja +8 por causa do branch delay slot ou nao
 			state.setPC(jumpAddress);
-		}
+		} else
+			throw new CommandNotFoundException();
+		if (PC == jumpAddress)
+			throw new PCEqualsNewPCException();
 	}
 	
 	// Construtor da classe
@@ -375,7 +366,7 @@ public class MyMIPS implements MIPS{
 			comandoI(state, opCode, rs, rt, immediate);
 		}
 	}
-	// Main que executar√° o console externo do simulador
+	// Main que executar· o console externo do simulador
 	public static void main(String[] args) {
 		try {
 			Simulator.setMIPS(new MyMIPS());
