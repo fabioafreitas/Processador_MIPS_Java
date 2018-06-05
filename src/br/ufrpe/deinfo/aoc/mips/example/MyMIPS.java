@@ -86,6 +86,7 @@ public class MyMIPS implements MIPS{
 	
 	// comandos do tipo I
 	public static void comandoI(State state, int opCode, int rs, int rt, int immediate) throws Exception{
+		int immediateUnsigned = immediate;
 		if (immediate >= 0b1000000000000000) {
 			// converte de complemento a 2 16 bit para 32 bit (Sign Extend)
 			immediate = immediate + 0xffff0000;
@@ -101,7 +102,7 @@ public class MyMIPS implements MIPS{
 				break;
 			}
 			case OPCODE.andi: { // R[rt] = R[rs] & ZeroExtImm
-				state.writeRegister(rt, state.readRegister(rs) & immediate);
+				state.writeRegister(rt, state.readRegister(rs) & immediateUnsigned);
 				break;
 			}
 			case OPCODE.beq: { //if(R[rs]==R[rt]) faca->  PC=PC+4+BranchAddr
@@ -195,7 +196,7 @@ public class MyMIPS implements MIPS{
 				break;
 			}
 			case OPCODE.ori: { // R[rt] = R[rs] | ZeroExtImm
-				state.writeRegister(rt, ((int) state.readRegister(rs)) | immediate );
+				state.writeRegister(rt, ((int) state.readRegister(rs)) | immediateUnsigned );
 				break;
 			}
 			case OPCODE.slti: { // R[rt] = (R[rs] < SignExtImm)? 1 : 0
@@ -285,7 +286,7 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.srl: { // R[rd] = R[rt] >> shamt
-					state.writeRegister(rd,  state.readRegister(rt) >> shamt );
+					state.writeRegister(rd,  state.readRegister(rt) >>> shamt );
 					break;
 				}
 				case FUNCT.sub: { // R[rd] = R[rs] - R[rt]
@@ -297,7 +298,7 @@ public class MyMIPS implements MIPS{
 					break;
 				}
 				case FUNCT.sra: { // R[rd] = R[rt] >>> shamt
-					state.writeRegister(rd, state.readRegister(rt) >>> shamt);
+					state.writeRegister(rd, state.readRegister(rt) >> shamt);
 					break;
 				}
 				default: {
@@ -339,7 +340,7 @@ public class MyMIPS implements MIPS{
 		location_shamt = 6;
 		int opCode = instrucao >>> location_opcode;
 		instrucao = instrucao - (opCode << location_opcode);
-		if (opCode == 0x0 || opCode == OPCODE.mfc0) {
+		if (opCode == 0x0) {
 			// Tipo R
 			int rs, rt, rd, shamt, funct;
 			rs = instrucao >>> location_rs;
